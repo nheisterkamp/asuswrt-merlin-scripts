@@ -378,10 +378,12 @@ installAvahiConf() {
   CONF="$BASE/avahi-daemon.conf";
   backup "$CONF";
   line "# $CONF:";
+  LAN_DOMAIN=$(nvram get lan_domain);
+  LAN_DOMAIN=${LAN_DOMAIN:-local};
   tee "$CONF" <<EOS
 [server]
 host-name=$(nvram get computer_name)
-domain-name=$(nvram get lan_domain)
+domain-name=$LAN_DOMAIN
 use-ipv4=yes
 use-ipv6=no
 check-response-ttl=no
