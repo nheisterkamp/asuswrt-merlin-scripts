@@ -6,16 +6,33 @@ For use with the alternative firmware https://github.com/RMerl/asuswrt-merlin.
 
 Only tested with an Asus RT-AC66U.
 
+More scripts will be added in the future.
+
+Mandatory disclaimer
+--------------------
+These scripts /could/ are provided as-is and are a work in progress. I would love to hear feedback, but please don't 
+expect a one-click-and-everything-works solution -- yet. If you have any custom scripts/configs in /jffs be sure to back 
+them up. The scripts are designed to only be invasive in netatalk and avahi configs, but I can't oversee any unintended
+side-effects for the moment.
+
+That being said, my computer recognizes the router as a Time Machine. With the added benefit of being able to run some 
+more custom software on the device.
+
+YMMV.
+
+
 Time Machine
 ------------
-The reason to start with this project is to provide an easy way to add Mac OS X's Time Machine capabilities to this fine router.
+The reason to start with this project is to provide an easy way to add Mac OS X's Time Machine capabilities to this 
+fine router.
 
 ###Usage
 ```
 sh timemachine.sh [user [password]]
 ```
 
-If your username contains spaces and you are passing it along using a command-line argument, please enclose it in quotes "".
+If your username contains spaces and you are passing it along using a command-line argument, please enclose it in 
+quotes "".
 
 ### Prerequisites
 1. Install asuswrt-merlin on your router;
