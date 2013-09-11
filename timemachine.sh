@@ -44,7 +44,7 @@ line() {
 
 banner() {
   line "Time Machine installation script";
-  echo "Only tested on asuswrt-merlin.";
+  echo "Only tested with asuswrt-merlin on Asus RT-AC66U.";
 }
 
 usage() {
@@ -461,6 +461,21 @@ EOS
 </service-group>
 EOS
 
+  SAMBA="$SERVICES/samba.service";
+  backup "$SAMBA";
+  line "# $SAMBA";
+  tee "$SAMBA" <<EOS
+<?xml version="{1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<service-group>
+  <name replace-wildcards="yes">Samba Shares on %h</name>
+  <service>
+    <type>_smb._tcp</type>
+    <port>139</port>
+  </service>
+</service-group>
+EOS
+
   /opt/etc/init.d/S42avahi-daemon restart
 }
 
@@ -476,7 +491,6 @@ persistGroup "$USER";
 installAFPDConf;
 installAFPDMountScript "$USER";
 
-
 delGroup "avahi";
 addUser "avahi";
 persistGroup "avahi";
@@ -484,5 +498,5 @@ persistUser "avahi";
 installAvahiConf;
 
 ( go "It's probably a good idea to reboot now.. Shall we do that?" &&
-  echo "reboot"
+  reboot
 );
