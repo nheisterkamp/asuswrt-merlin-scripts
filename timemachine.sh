@@ -14,10 +14,10 @@ banner() {
   echo "  ##########################################################"
   echo ""
   echo "Example: "
-  echo "VERBOSITY=3 CONTINUE=\"yes\""
-  echo "AFPD_USER=\"Niels Heisterkamp\" AFPD_PASS=\"secret\""
-  echo "TIME_CHANGE=true TIME_SIZE=200000 TIME_USER=\"TimeTraveller\""
-  echo "timemachine.sh"
+  echo "VERBOSITY=3 CONTINUE=\"yes\" \\"
+  echo "AFPD_USER=\"Niels Heisterkamp\" AFPD_PASS=\"secret\" \\"
+  echo "TIME_SHARE=true TIME_NAME=\"TimeMachine\" TIME_SIZE=200000 \\"
+  echo "sh timemachine.sh"
 }
 
 usage() {
@@ -103,17 +103,14 @@ netatalkCheck() {
   log $SIL "* AFPD_PASS  = $AFPD_PASS"
   log $SIL "* AFPD_GUEST = $AFPD_GUEST"
 
-  if [ "$TIME_CHANGE" = "true" ]; then
-    export TIME_USER=${TIME_USER:=$AFPD_USER}
-    export TIME_PASS=${TIME_PASS:=$AFPD_PASS}
+  if [ "$TIME_SHARE" = "true" ]; then
     export TIME_NAME=${TIME_NAME:=TimeMachine}
-    export TIME_SHARE=${TIME_SHARE:="$(entwareBase)/$TIME_NAME"}
+    export TIME_LOC=${TIME_LOC:="$(entwareBase)/$TIME_NAME"}
     export TIME_SIZE=${TIME_SIZE:=200000}
 
-    log $SIL "* TIME_USER  = $TIME_USER"
-    log $SIL "* TIME_PASS  = $TIME_PASS"
     log $SIL "* TIME_SHARE = $TIME_SHARE"
     log $SIL "* TIME_NAME  = $TIME_NAME"
+    log $SIL "* TIME_LOC   = $TIME_LOC"
     log $SIL "* TIME_SIZE  = $TIME_SIZE"
   fi
 }
@@ -147,17 +144,18 @@ netatalkInstall() {
     addUser "$AFPD_USER" "$AFPD_PASS"
   fi
 
-  addUser "$TIME_USER" "$TIME_PASS"
-  mkdir -p "$TIME_SHARE"
-  chown "$TIME_USER" -R "$TIME_SHARE/"*
-  export -p | grep "TIME_" >"$CONFIGS/timemachine.vars"
-  chmod +x "$CONFIGS/timemachine.vars"
+  if [ "$TIME_SHARE" = "true" ]; then
+    export -p | grep "TIME_" >"$CONFIGS/timemachine.vars"
+    chmod +x "$CONFIGS/timemachine.vars"
+    mkdir -p "$TIME_LOC"
+    chown "$AFPD_USER:$AFPD_USER" -R "$TIME_LOC/"*
+  fi
 
   addUser "nobody"
   installAFPDConf
   installAFPDMountScript "$AFPD_USER"
 
-  /jffs/scripts/afpd-mount && /opt/etc/init.d/S27afpd restart
+  /jffs/scripts/afpd-mount && /opt/etc/init.d/S27afpd reconfigure
 }
 
 avahiCheck() {
@@ -695,7 +693,7 @@ addShare() {
   echo "Create share: \$SHARE (\$NAME)"
 
   ADD="\$SHARE \"\$NAME\" "
-  ADD="\$ADD cnidscheme:dbd options:usedots,upriv,tm"
+  ADD="\$ADD cnidscheme:dbd options:usedots,upriv"
   if [ "\$VOLSIZELIMIT" != "" ]; then
     ADD="\$ADD volsizelimit:\$VOLSIZELIMIT"
   fi
@@ -714,12 +712,15 @@ done
 
 if [ -x "/jffs/configs/timemachine.vars" ]; then
   echo "Add Time Machine share"
-  ( source /jffs/configs/timemachine.vars
-    grep -n "" "/jffs/configs/timemachine.vars"
-    if [ "\$TIME_SHARE" = "" ] || [ "\$TIME_USER" = "" ]; then
-      echo "Missing some information (TIME_SHARE , TIME_USER)"
+  ( . /jffs/configs/timemachine.vars
+    if [ "\$TIME_LOC" = "" ]; then
+      echo "Time Machine not enabled"
+      return 0
+    fi
+    if [ "\$TIME_NAME" = "" ]; then
+      TIME_NAME=$(basename "\$TIME_LOC")
     else
-      addShare "$TIME_SHARE" \$(basename "\$TIME_SHARE") "\$TIME_USER" "\$TIME_SIZE"
+      addShare "\$TIME_LOC" "\$TIME_NAME" "\$AFPD_USER" "\$TIME_SIZE"
     fi
   )
 fi
