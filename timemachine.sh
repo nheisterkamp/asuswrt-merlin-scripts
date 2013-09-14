@@ -2,16 +2,16 @@
 banner() {
   echo ""
   echo ""
-  echo "  ##########################################################"
-  echo "  ####                                                     #"
-  echo "  ####  Time Machine -and soon more- installation magic    #"
-  echo "  ####  ------------------------------------------------   #"
-  echo "  ####  Only tested with asuswrt-merlin on Asus RT-AC66U   #"
-  echo "  ####  and external HD with just one partition formatted  #"
-  echo "  ####  as ext3, but is prepared for multiple HDs and      #"
-  echo "  ####  USB hotswapping.                                   #"
-  echo "  ####                                                     #"
-  echo "  ##########################################################"
+  echo "     ##########################################################"
+  echo "     ####                                                     #"
+  echo "     ####  Time Machine -and soon more- installation magic    #"
+  echo "     ####  ------------------------------------------------   #"
+  echo "     ####  Only tested with asuswrt-merlin on Asus RT-AC66U   #"
+  echo "     ####  and external HD with just one partition formatted  #"
+  echo "     ####  as ext3, but is prepared for multiple HDs and      #"
+  echo "     ####  USB hotswapping.                                   #"
+  echo "     ####                                                     #"
+  echo "     ##########################################################"
   echo ""
   echo "Example: "
   echo "VERBOSITY=3 CONTINUE=\"yes\" \\"
@@ -28,13 +28,13 @@ usage() {
   log $SIL "* set the following things in the web interface"
   log $SIL "  - your routers hostname"
   log $SIL "  - an admin user for the web interface"
-  log $SIL "  - enabled JFFS (optional, but requires a reboot"
+  log $SIL "  - enabled JFFS (optional, but requires a reboot)"
   log $SIL ""
   log $SIL "Global variables (these can be set by setting them before launching):"
-  log $SIL "* FILENAME   = $FILENAME"
-  log $SIL "* VERBOSITY  = $VERBOSITY"
-  log $SIL "* CONTINUE   = $CONTINUE"
-  log $SIL "* INSTALL    = $INSTALL"
+  log $SIL "  FILENAME   = $FILENAME"
+  log $SIL "  VERBOSITY  = $VERBOSITY"
+  log $SIL "  CONTINUE   = $CONTINUE"
+  log $SIL "  INSTALL    = $INSTALL"
   plainLine
 
   if ! $SOURCED; then
@@ -48,19 +48,15 @@ settings() {
   # stop when error occurs
   set -e
   ## VARIABLES {{
-
   # script filename -- needed to determine if this script is called or sourced
   FILENAME=${FILENAME:-"timemachine.sh"}
-
   # scale 0,1,2,3,4 = banners,error,warning,info,verbose,data
   VERBOSITY=${VERBOSITY:-4}
-
   # always answer yes on questions
   CONTINUE=${CONTINUE:-"no"}
-
   # currently available installers
   INSTALL=${INSTALL:-"netatalk avahi transmission"}
-
+  # path
   PATH="/opt/usr/sbin:/opt/sbin:/opt/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin"
   ## }}
 }
@@ -72,8 +68,8 @@ main() {
     line $SIL "Which packages would you like:"
 
     for NAME in $INSTALL; do
+      ${NAME}Check
       if go "Install $NAME?"; then
-        ${NAME}Check
         ${NAME}Install
       fi
     done
@@ -99,9 +95,9 @@ netatalkCheck() {
     AFPD_GUEST=false
   fi;
 
-  log $SIL "* AFPD_USER  = $AFPD_USER"
-  log $SIL "* AFPD_PASS  = $AFPD_PASS"
-  log $SIL "* AFPD_GUEST = $AFPD_GUEST"
+  log $SIL "  AFPD_USER  = $AFPD_USER"
+  log $SIL "  AFPD_PASS  = $AFPD_PASS"
+  log $SIL "  AFPD_GUEST = $AFPD_GUEST"
 
   if [ "$TIME_SHARE" = "true" ]; then
     export TIME_NAME=${TIME_NAME:=TimeMachine}
@@ -159,7 +155,7 @@ netatalkInstall() {
 }
 
 avahiCheck() {
-  log $ERR "TODO : checkAvahi()"
+  :
 }
 
 avahiInstall() {
@@ -178,21 +174,74 @@ avahiInstall() {
 }
 
 opensshCheck() {
-  log $ERR "TODO : opensshCheck()"
+  :
 }
 
 opensshInstall() {
-  # installPackages "openssh-server"
-  log $ERR "TODO : opensshInstall()"
+  installPackages "openssh-server"
+  addUser "sshd"
 }
 
 transmissionCheck() {
-  log $ERR "TODO : transmissionCheck()"
+  TRANS_DIRE=${TRANS_DIRE:="$(entwareBase)/Downloads"}
+  TRANS_CMPL=${TRANS_COMP:="$TRANS_DIRE/Complete"}
+  TRANS_INCO=${TRANS_INCO:="$TRANS_DIRE/Incomplete"}
+  TRANS_WATC=${TRANS_WATC:="$TRANS_DIRE/Watchdir"}
+  TRANS_CONF=${TRANS_CONF:="$TRANS_DIRE/Config"}
+  TRANS_USER=${TRANS_USER:="$USER"}
+  TRANS_USER=${TRANS_USER:="$AFPD_USER"}
+  TRANS_PASS=${TRANS_PASS:="$AFPD_PASS"}
+
+  log $SIL "Transmission variables:"
+  log $SIL "  TRANS_DIRE = $TRANS_DIRE"
+  log $SIL "  TRANS_CMPL = $TRANS_CMPL"
+  log $SIL "  TRANS_INCO = $TRANS_INCO"
+  log $SIL "  TRANS_WATC = $TRANS_WATC"
+  log $SIL "  TRANS_USER = $TRANS_USER"
+  log $SIL "  TRANS_PASS = $TRANS_PASS"
 }
 
+# transmissionSetting() {
+#   FILE="$1"; KEY="$2"; VALUE="$3";
+#   sed -i -r "s#(\"$KEY\": )(\"?)([^\"]*)(\"?)(,?)#\1\2$VALUE\4\5#w" "$FILE"
+# }
+
 transmissionInstall() {
-  # installPackages transmission-daemon transmission-web
-  log $ERR "TODO : transmissionInstall()"
+  line $INF "Installing Transmission"
+  installPackages transmission-daemon transmission-web
+  /opt/etc/init.d/S88transmission stop || echo " - He's dead, Jim."
+
+  # FILE="/opt/etc/transmission/settings.json"
+  backup "$FILE"
+  mkdir -p "$TRANS_DIRE" "$TRANS_INCO" "$TRANS_CMPL" "$TRANS_WATC" "$TRANS_CONF"
+
+  # transmissionSetting "$FILE" "download-dir"           "$TRANS_CMPL"
+  # transmissionSetting "$FILE" "incomplete-dir"         "$TRANS_INCO"
+  # transmissionSetting "$FILE" "incomplete-dir-enabled" "true"
+  # transmissionSetting "$FILE" "rpc-bind-address"       "$(nvram get lan_ipaddr)"
+  # transmissionSetting "$FILE" "rpc-password"           "$TRANS_PASS"
+  # transmissionSetting "$FILE" "rpc-username"           "$TRANS_USER"
+  # transmissionSetting "$FILE" "watch-dir"              "$TRANS_WATC"
+  # transmissionSetting "$FILE" "watch-dir-enabled"      "true"
+
+  # cat "$FILE"
+  transmission-daemon --config-dir "/opt/etc/transmission" \
+                       --watch-dir "$TRANS_WATC" \
+                  --incomplete-dir "$TRANS_INCO" \
+                            --auth \
+                        --username "$TRANS_USER" \
+                        --password "$TRANS_PASS" \
+                    --download-dir "$TRANS_CMPL" \
+                         --portmap \
+                         --allowed "*" \
+                   --dump-settings 2>"$TRANS_CONF/settings.json"
+                # --rpc-bind-address "$(nvram get lan_ipaddr)" \
+
+  sed -i "s#^(ARGS=\")([^\"]*)(\")#\1-g \"$TRANS_CONF/settings.json\"\3#" \
+         "/opt/etc/init.d/S88transmission"
+
+  /opt/etc/init.d/S88transmission start
+  line $INF ""
 }
 
 ################################################################################
@@ -227,7 +276,7 @@ init() {
   usage
   autorun
   prerequisites
-  installPackages busybox shadow-usermod blkid
+  installPackages busybox shadow-passwd shadow-usermod blkid nano
 }
 
 autorun() {
@@ -306,7 +355,7 @@ log() {
 }
 
 plainLine() {
-  echo "------------------------------------------------------------------"
+  echo "-----------------------------------------------------------------------"
 }
 
 line() {
@@ -547,22 +596,16 @@ addUser() {
 
 setPasswd() {
   line $INF "Set password for \"$1\" to \"******\""
-  # SHADOW=$(getShadow "$1")
 
-  if [ $# -gt 1 ]; then
+  if [ $# -eq 1 ]; then
     log $INF "Not going to set a password"
   elif [ "$2" != "" ]; then
-    /opt/sbin/usermod -p $(/opt/bin/mkpasswd -s "$2") "$1"
+    SALT=$(S=</dev/urandom tr -dc A-Za-z0-9 | head -c 16)
+    log $INF "Salt: $SALT"
+    /opt/sbin/usermod -p $(mkpasswd -m sha-512 "$AFPD_PASS" "$SALT") "$1"
     log $INF "Password set from script."
-  else
-    if [ "$SHADOW" = "" ]; then
-      /opt/bin/passwd "$1"
-      log $INF "Password set user-interactive from passwd."
-    else
-      log $WAR "Password already set. To reset password run:"
-      log $WAR "$ passwd \"$1\""
-    fi
   fi
+
   line $INF ""
 }
 
@@ -688,12 +731,12 @@ devName() {
 }
 
 addShare() {
-  SHARE="\$1"; NAME="\$2"; USERS="\$3"; VOLSIZELIMIT="\$4"
-  echo "\$SHARE - \$NAME - \$USERS - \$VOLSIZELIMIT"
+  SHARE="\$1"; NAME="\$2"; USERS="\$3"; OPTIONS="\$4"; VOLSIZELIMIT="\$5"
+  echo "\$SHARE :: \$NAME :: \$USERS :: \$OPTIONS :: \$VOLSIZELIMIT"
   echo "Create share: \$SHARE (\$NAME)"
 
   ADD="\$SHARE \"\$NAME\" "
-  ADD="\$ADD cnidscheme:dbd options:usedots,upriv"
+  ADD="\$ADD cnidscheme:dbd options:usedots,upriv$OPTIONS"
   if [ "\$VOLSIZELIMIT" != "" ]; then
     ADD="\$ADD volsizelimit:\$VOLSIZELIMIT"
   fi
@@ -720,7 +763,7 @@ if [ -x "/jffs/configs/timemachine.vars" ]; then
     if [ "\$TIME_NAME" = "" ]; then
       TIME_NAME=$(basename "\$TIME_LOC")
     else
-      addShare "\$TIME_LOC" "\$TIME_NAME" "\$AFPD_USER" "\$TIME_SIZE"
+      addShare "\$TIME_LOC" "\$TIME_NAME" "\$AFPD_USER" ",tm" "\$TIME_SIZE"
     fi
   )
 fi
@@ -750,7 +793,7 @@ writeAvahiService() {
   CONFSUFFIX="</service-group>"
   echo -e "$CONFPREFIX\n$CONFMAIN\n$CONFSUFFIX\n" >"$FILE"
   if logShow 5; then
-    cat "$FILE"
+    grep -n "" "$FILE"
   fi
 }
 
@@ -764,7 +807,7 @@ avahiInstallConf() {
   HOST="$(nvram get computer_name)"
   IP="$(nvram get lan_ipaddr)"
   LAN_DOMAIN=$(nvram get lan_domain)
-  LAN_DOMAIN=${LAN_DOMAIN:-local}
+  LAN_DOMAIN=${LAN_DOMAIN:=local}
 
   log $VER "# CONF"
   cat >"$CONF" <<EOS
@@ -802,6 +845,12 @@ EOS
     cat "$CONF"
   fi
 
+  for FILE in "$BASE/services/"*.service; do
+    echo "Delete $FILE"
+    backup $FILE
+    rm $FILE
+  done
+
   go "Enable Apple File Protocol (netatalk / afpd) broadcast?" &&
     writeAvahiService "afpd" "
   <service>
@@ -814,34 +863,34 @@ EOS
     <txt-record>model=AirPort</txt-record>
   </service>"
 
-  go "Enable Secure Shell (SSH) broadcast?" &&
-    writeAvahiService "ssh" "
-  <service>
-    <type>_ssh._tcp</type>
-    <port>22</port>
-  </service>"
+  # go "Enable Secure Shell (SSH) broadcast?" &&
+  #   writeAvahiService "ssh" "
+  # <service>
+  #   <type>_ssh._tcp</type>
+  #   <port>22</port>
+  # </service>"
 
-  go "Enable Routers Homepage (HTTP) broadcast?" &&
-    writeAvahiService "http" "
-  <service>
-    <type>_http._tcp</type>
-    <port>80</port>
-  </service>"
+  # go "Enable Routers Homepage (HTTP) broadcast?" &&
+  #   writeAvahiService "http" "
+  # <service>
+  #   <type>_http._tcp</type>
+  #   <port>80</port>
+  # </service>"
 
-  go "Enable Windows File Sharing (Samba) broadcast?" &&
-    writeAvahiService "samba" "
-  <service>
-    <type>_smb._tcp</type>
-    <port>139</port>
-  </service>"
+  # go "Enable Windows File Sharing (Samba) broadcast?" &&
+  #   writeAvahiService "samba" "
+  # <service>
+  #   <type>_smb._tcp</type>
+  #   <port>139</port>
+  # </service>"
 
-  go "Enable Network File System (NFS) broadcast?" &&
-    writeAvahiService "nfs" "
-  <service>
-    <type>_nfs._tcp</type>
-    <port>2149</port>
-    <txt-record>path=/tmp/etc/exports</txt-record>
-  </service>"
+  # go "Enable Network File System (NFS) broadcast?" &&
+  #   writeAvahiService "nfs" "
+  # <service>
+  #   <type>_nfs._tcp</type>
+  #   <port>2149</port>
+  #   <txt-record>path=/tmp/etc/exports</txt-record>
+  # </service>"
 
   go "Enable iTunes Library (DAAP) broadcast?" &&
     writeAvahiService "daap" "
@@ -857,12 +906,12 @@ EOS
   <txt-record>txtvers=1 iTShVersion=131073 Version=196610</txt-record>
   </service>"
 
-  go "Enable Digital Living Network Alliance (DLNA) broadcast?" &&
-    writeAvahiService "dlna" "
-  <service>
-    <type>_http._tcp</type>
-    <port>8200</port>
-  </service>"
+  # go "Enable Digital Living Network Alliance (DLNA) broadcast?" &&
+  #   writeAvahiService "dlna" "
+  # <service>
+  #   <type>_http._tcp</type>
+  #   <port>8200</port>
+  # </service>"
 
   /opt/etc/init.d/S42avahi-daemon restart
   line $INF ""
