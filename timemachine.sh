@@ -2,6 +2,7 @@
 banner() {
   echo ""
   echo ""
+  echo -e -n "\033[1m"
   echo "     ##########################################################"
   echo "     ####                                                     #"
   echo "     ####  Time Machine -and soon more- installation magic    #"
@@ -18,6 +19,7 @@ banner() {
   echo "AFPD_USER=\"Niels Heisterkamp\" AFPD_PASS=\"secret\" \\"
   echo "TIME_SHARE=true TIME_NAME=\"TimeMachine\" TIME_SIZE=200000 \\"
   echo "sh timemachine.sh"
+  echo -e -n "\033[0m"
 }
 
 usage() {
@@ -325,10 +327,10 @@ logLevel() {
 
 logPrefix() {
   case $(logLevel $1) in
-      0 ) echo "";     break;;
-      1 ) echo "(E) "; break;;
-      2 ) echo "(W) "; break;;
-      3 ) echo "(I) "; break;;
+      0 ) echo "\033[3m";     break;;
+      1 ) echo "\033[1m\033[4m(E) "; break;;
+      2 ) echo "\033[1m\033[4m(W) "; break;;
+      3 ) echo "\033[1m(I) "; break;;
       4 ) echo "(V) "; break;;
       5 ) echo "";     break;;
       * ) echo "(B) "; return 1;;
@@ -348,7 +350,11 @@ logShow() {
 
 log() {
   if logShow $1; then
-    echo "$(logPrefix $1)$2"
+    PREFIX="$(logPrefix $1)";
+    echo -e "${PREFIX}${2}"
+    if [ "${PREFIX}" != "" ]; then
+      echo -n -e "\033[0m"
+    fi
   fi
 
   return 0
@@ -369,7 +375,7 @@ line() {
         echo ""
       fi
       plainLine
-      echo "### $2"
+      echo -e "\033[1m### $2\033[0m"
     fi
   fi
 }
@@ -602,7 +608,7 @@ setPasswd() {
   elif [ "$2" != "" ]; then
     SALT=$(S=</dev/urandom tr -dc A-Za-z0-9 | head -c 16)
     log $INF "Salt: $SALT"
-    /opt/sbin/usermod -p $(mkpasswd -m sha-512 "$AFPD_PASS" "$SALT") "$1"
+    /opt/sbin/usermod -p $(mkpasswd -m sha-512 "$2" "$SALT") "$1"
     log $INF "Password set from script."
   fi
 
@@ -656,10 +662,10 @@ editConfig() { # $FILE $FIND $NEW
 
 persistSave() { # $FILE $KEY $VALUE
   log $VER "Storing in $1 for $2 : $3"
-  BASE="$CONFIGS/$FILE"
+  BASE="$CONFIGS/$1"
   DIR="$BASE.d"
   mkdir -p "$DIR"
-  echo "$3" >"$DIR/$1"
+  echo "$3" >"$DIR/$2"
   cat "$DIR/"* >"$BASE"
 }
 
@@ -736,7 +742,7 @@ addShare() {
   echo "Create share: \$SHARE (\$NAME)"
 
   ADD="\$SHARE \"\$NAME\" "
-  ADD="\$ADD cnidscheme:dbd options:usedots,upriv$OPTIONS"
+  ADD="\$ADD cnidscheme:dbd options:usedots,upriv\$OPTIONS"
   if [ "\$VOLSIZELIMIT" != "" ]; then
     ADD="\$ADD volsizelimit:\$VOLSIZELIMIT"
   fi
